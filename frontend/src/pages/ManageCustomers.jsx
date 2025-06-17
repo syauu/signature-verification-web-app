@@ -1,39 +1,58 @@
 // frontend/src/pages/ManageCustomers.jsx
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getCustomers, deleteCustomer } from '../apiService';
 
 function ManageCustomers() {
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState('');
-  const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
 
+  // This function fetches the fresh list of customers from the backend.
   const fetchCustomers = async () => {
     try {
+      setIsLoading(true);
       const data = await getCustomers();
-      setCustomers(data);
+      // Ensure the data is an array before setting it
+      if (Array.isArray(data)) {
+        setCustomers(data);
+      } else {
+        setCustomers([]); // Set to empty array if data is not as expected
+      }
+      setError('');
     } catch (err) {
       setError('Failed to load customers.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // This hook runs once when the component is first loaded.
   useEffect(() => {
     fetchCustomers();
-  }, [location.state]);
+  }, []);
 
-  const handleDelete = async (customerId, customerName) => {
-    // A confirmation dialog is a good practice to prevent accidental deletions
-    if (window.confirm(`Are you sure you want to delete ${customerName} and all their related data? This action cannot be undone.`)) {
+  // This function handles the delete action.
+  const handleDeleteClick = async (customerId, customerName) => {
+    // Confirmation dialog is a good practice.
+    if (window.confirm(`Are you sure you want to delete ${customerName}? This action cannot be undone.`)) {
       try {
         await deleteCustomer(customerId);
-        // Refresh the customer list after a successful deletion
-        fetchCustomers();
+        // After deleting from the DB, filter the customer out of the local state
+        // to instantly update the UI without a page reload.
+        setCustomers(currentCustomers =>
+          currentCustomers.filter(c => c.customer_id !== customerId)
+        );
       } catch (err) {
-        setError(err.message);
+        setError(err.message || 'Failed to delete customer.');
       }
     }
   };
+
+  if (isLoading) {
+    return <div>Loading customers...</div>;
+  }
 
   return (
     <div>
@@ -54,12 +73,14 @@ function ManageCustomers() {
             <tr key={customer.customer_id} style={{ borderBottom: '1px solid grey' }}>
               <td style={{ padding: '8px' }}>{customer.customer_name}</td>
               <td style={{ padding: '8px' }}>{customer.customer_email}</td>
-              <td style={{ padding: '8px' }}>{customer.national_id}</td>
+              {/* This will now display the national_id from the API, or 'N/A' if it's null */}
+              <td style={{ padding: '8px' }}>{customer.national_id || 'N/A'}</td>
               <td style={{ padding: '8px' }}>
                 <Link to={`/edit-customer/${customer.customer_id}`}>
                   <button style={{ marginRight: '10px' }}>Edit</button>
                 </Link>
-                <button onClick={() => handleDelete(customer.customer_id, customer.customer_name)}>
+                {/* The onClick handler calls our delete function with the correct arguments */}
+                <button onClick={() => handleDeleteClick(customer.customer_id, customer.customer_name)}>
                   Delete
                 </button>
               </td>

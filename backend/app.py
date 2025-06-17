@@ -2,7 +2,7 @@ import os
 import psycopg2
 import psycopg2.extras
 from flask import Flask, request, jsonify, session
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image
 from functools import wraps
@@ -25,7 +25,12 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "http://localhost:5173"}},
+    methods=['GET', 'POST', 'PUT', 'DELETE'],
+    supports_credentials=True
+)
 
 DB_NAME = "signature_db"
 DB_USER = "syauqi" # <-- CHANGE THIS
@@ -227,7 +232,7 @@ def api_get_all_customers():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT customer_id, customer_name, customer_email FROM Customer ORDER BY customer_name ASC")
+            cur.execute("SELECT customer_id, customer_name, customer_email, national_id FROM Customer ORDER BY customer_name ASC")
             customers = cur.fetchall()
         return jsonify(customers)
     except Exception as e:
@@ -322,6 +327,67 @@ def api_admin_verify_signature():
     except Exception as e:
         conn.rollback()
         return jsonify({'error': f'Verification failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/admin/signature/upload', methods=['POST'])
+@admin_required
+def api_admin_upload_signature():
+    # Admin uploads a signature ON BEHALF of a customer.
+    if 'customer_id' not in request.form:
+        return jsonify({'error': 'customer_id is required in form data'}), 400
+    if 'signature_file' not in request.files:
+        return jsonify({'error': 'No signature file provided'}), 400
+
+    file = request.files['signature_file']
+    customer_id = request.form.get('customer_id')
+    
+    filename = f"customer_{customer_id}_{file.filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    conn = get_db_connection()
+    try:
+        with open(filepath, 'rb') as f:
+            img_bytes = f.read()
+        preprocessed_img = preprocess_image(img_bytes)
+        embedding = embedding_model.predict(preprocessed_img)[0]
+        embedding_list = embedding.tolist()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
+                (customer_id, filename, embedding_list)
+            )
+            conn.commit()
+        return jsonify({'message': 'Signature uploaded successfully for customer ' + str(customer_id)})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': f'Failed to process signature: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+#@cross_origin(supports_credentials=True)
+@app.route('/api/admin/customer/<int:customer_id>', methods=['DELETE'])
+@admin_required
+def api_delete_customer(customer_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # To maintain data integrity, we must delete records referencing the customer first.
+            cur.execute("DELETE FROM HandSignature WHERE customer_id = %s", (customer_id,))
+            cur.execute("DELETE FROM Verification WHERE customer_id = %s", (customer_id,))
+            cur.execute("DELETE FROM Registration WHERE customer_id = %s", (customer_id,))
+            # Finally, delete the customer themselves.
+            cur.execute("DELETE FROM Customer WHERE customer_id = %s", (customer_id,))
+            conn.commit()
+        # Ensure a JSON response is always returned for successful DELETE
+        return jsonify({'message': 'Customer and all related data deleted successfully'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         if conn:
             conn.close()
