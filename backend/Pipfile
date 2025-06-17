@@ -12,6 +12,7 @@ scikit-learn = "*"
 flask-cors = "*"
 python-dotenv = "*"
 psycopg2-binary = "*"
+cryptography = "*"
 
 [dev-packages]
 

@@ -7,7 +7,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image
 from functools import wraps
 import numpy as np
-import io
+import io, os
+from cryptography.fernet import Fernet
 import tensorflow as tf
 from psycopg2.extensions import register_adapter, AsIs
 from dotenv import load_dotenv
@@ -25,6 +26,11 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+if not ENCRYPTION_KEY:
+    raise ValueError("No ENCRYPTION_KEY set in .env file!")
+cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+
 CORS(
     app,
     resources={r"/api/*": {"origins": "http://localhost:5173"}},
@@ -33,7 +39,7 @@ CORS(
 )
 
 DB_NAME = "signature_db"
-DB_USER = "syauqi" # <-- CHANGE THIS
+DB_USER = "syauqi"
 DB_PASS = ""
 DB_HOST = "localhost"
 DB_PORT = "5432"
@@ -60,6 +66,23 @@ def preprocess_image(image_bytes):
     img_array = np.array(img) / 255.0
     img_array = 1.0 - img_array
     return np.expand_dims(img_array, axis=0)
+
+# ===================================================================
+#          ENCRYPTION & DECRYPTION HELPER FUNCTIONS
+# ===================================================================
+
+def encrypt_data(data):
+    """Encrypts data (must be bytes)."""
+    if data is None:
+        return None
+    return cipher_suite.encrypt(data.encode('utf-8'))
+
+def decrypt_data(encrypted_data):
+    """Decrypts data and returns as a string."""
+    if encrypted_data is None:
+        return None
+    # The data from DB might be in a memoryview, convert to bytes
+    return cipher_suite.decrypt(bytes(encrypted_data)).decode('utf-8')
 
 # ===================================================================
 #                       API ENDPOINTS (MODEL B)
@@ -163,18 +186,17 @@ def api_create_customer_and_signature():
             )
 
             # Save the file and process the signature
+            file = request.files['signature_file']
+            original_data = file.read() # Read the file's binary content
+            encrypted_data = cipher_suite.encrypt(original_data)
+
             filename = f"customer_{customer_id}_{file.filename}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+            with open(filepath, 'wb') as f_encrypted:
+                f_encrypted.write(encrypted_data)
 
-            # Get embedding from the AI model
-            with open(filepath, 'rb') as f:
-                img_bytes = f.read()
-            preprocessed_img = preprocess_image(img_bytes)
-            embedding = embedding_model.predict(preprocessed_img)[0]
+            embedding = embedding_model.predict(preprocess_image(original_data))[0]
             embedding_list = embedding.tolist()
-
-            # Insert the signature record
             cur.execute(
                 "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
                 (customer_id, filename, embedding_list)
@@ -197,21 +219,21 @@ def api_create_customer_and_signature():
         if conn:
             conn.close()
 
+@cross_origin(supports_credentials=True) # It's good practice to keep this decorator
 @app.route('/api/admin/customer/<int:customer_id>', methods=['PUT'])
 @admin_required
 def api_update_customer(customer_id):
     """
     UPDATED: Handles updating customer text details AND optionally replacing
-    their reference signature file and embedding.
+    their reference signature file by ENCRYPTING it before saving.
     """
-    # This endpoint now handles multipart/form-data
     if 'customer_name' not in request.form or 'customer_email' not in request.form or 'national_id' not in request.form:
          return jsonify({'error': 'Name, email, and national ID are required in form data.'}), 400
 
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # Step 1: Update the customer's text details first.
+            # Step 1: Update the customer's text details first. This part is unchanged.
             cur.execute(
                 "UPDATE Customer SET customer_name = %s, customer_email = %s, customer_phone = %s, national_id = %s WHERE customer_id = %s",
                 (
@@ -227,35 +249,47 @@ def api_update_customer(customer_id):
             if 'signature_file' in request.files:
                 new_file = request.files['signature_file']
                 
-                # First, find the old signature record to get the filename to delete.
-                cur.execute("SELECT signature_id, signature_image FROM HandSignature WHERE customer_id = %s LIMIT 1", (customer_id,))
-                old_signature = cur.fetchone()
-
-                if old_signature:
-                    # Delete the old file from the /uploads folder.
-                    old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], old_signature['signature_image'])
-                    if os.path.exists(old_filepath):
-                        os.remove(old_filepath)
+                # Also check if the user actually selected a file
+                if new_file and new_file.filename != '':
                     
-                    # Delete the old record from the database.
-                    cur.execute("DELETE FROM HandSignature WHERE signature_id = %s", (old_signature['signature_id'],))
+                    # First, find the old signature record to get the filename to delete.
+                    cur.execute("SELECT signature_id, signature_image FROM HandSignature WHERE customer_id = %s LIMIT 1", (customer_id,))
+                    old_signature = cur.fetchone()
 
-                # Now, process and save the new signature.
-                new_filename = f"customer_{customer_id}_{new_file.filename}"
-                new_filepath = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
-                new_file.save(new_filepath)
+                    if old_signature:
+                        # Delete the old file from the /uploads folder.
+                        old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], old_signature['signature_image'])
+                        if os.path.exists(old_filepath):
+                            os.remove(old_filepath)
+                        
+                        # Delete the old record from the database.
+                        cur.execute("DELETE FROM HandSignature WHERE signature_id = %s", (old_signature['signature_id'],))
 
-                with open(new_filepath, 'rb') as f:
-                    img_bytes = f.read()
-                
-                embedding = embedding_model.predict(preprocess_image(img_bytes))[0]
-                embedding_list = embedding.tolist()
+                    # --- MODIFICATION START: Encrypt file before saving ---
 
-                # Insert the new signature record.
-                cur.execute(
-                    "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
-                    (customer_id, new_filename, embedding_list)
-                )
+                    # 1. Read the uploaded file's binary content into memory
+                    original_data = new_file.read()
+
+                    # 2. Encrypt the data using the cipher_suite defined at the top of your app
+                    encrypted_data = cipher_suite.encrypt(original_data)
+                    
+                    # 3. Save the ENCRYPTED data to the new file
+                    new_filename = f"customer_{customer_id}_{new_file.filename}"
+                    new_filepath = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+                    with open(new_filepath, 'wb') as f_encrypted:
+                        f_encrypted.write(encrypted_data)
+
+                    # 4. Use the ORIGINAL, unencrypted data in memory for the AI model
+                    embedding = embedding_model.predict(preprocess_image(original_data))[0]
+                    embedding_list = embedding.tolist()
+                    
+                    # --- MODIFICATION END ---
+
+                    # Insert the new signature record.
+                    cur.execute(
+                        "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
+                        (customer_id, new_filename, embedding_list)
+                    )
 
             # Commit all changes as a single transaction.
             conn.commit()
