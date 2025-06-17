@@ -1,0 +1,30 @@
+# Node / React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# Python / Flask
+backend/venv/
+backend/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/instance/
+
+# Environment files
+.env
+frontend/.env
+backend/.env
+
+# Logs
+*.log
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git LFS attributes (optional)
+.gitattributes
