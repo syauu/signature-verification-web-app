@@ -200,19 +200,64 @@ def api_create_customer_and_signature():
 @app.route('/api/admin/customer/<int:customer_id>', methods=['PUT'])
 @admin_required
 def api_update_customer(customer_id):
-    data = request.get_json()
-    name = data.get('customer_name')
-    email = data.get('customer_email')
-    phone = data.get('customer_phone')
-    national_id = data.get('national_id')
+    """
+    UPDATED: Handles updating customer text details AND optionally replacing
+    their reference signature file and embedding.
+    """
+    # This endpoint now handles multipart/form-data
+    if 'customer_name' not in request.form or 'customer_email' not in request.form or 'national_id' not in request.form:
+         return jsonify({'error': 'Name, email, and national ID are required in form data.'}), 400
 
     conn = get_db_connection()
     try:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Step 1: Update the customer's text details first.
             cur.execute(
                 "UPDATE Customer SET customer_name = %s, customer_email = %s, customer_phone = %s, national_id = %s WHERE customer_id = %s",
-                (name, email, phone, national_id, customer_id)
+                (
+                    request.form.get('customer_name'),
+                    request.form.get('customer_email'),
+                    request.form.get('customer_phone'),
+                    request.form.get('national_id'),
+                    customer_id
+                )
             )
+
+            # Step 2: Check if a new signature file was uploaded.
+            if 'signature_file' in request.files:
+                new_file = request.files['signature_file']
+                
+                # First, find the old signature record to get the filename to delete.
+                cur.execute("SELECT signature_id, signature_image FROM HandSignature WHERE customer_id = %s LIMIT 1", (customer_id,))
+                old_signature = cur.fetchone()
+
+                if old_signature:
+                    # Delete the old file from the /uploads folder.
+                    old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], old_signature['signature_image'])
+                    if os.path.exists(old_filepath):
+                        os.remove(old_filepath)
+                    
+                    # Delete the old record from the database.
+                    cur.execute("DELETE FROM HandSignature WHERE signature_id = %s", (old_signature['signature_id'],))
+
+                # Now, process and save the new signature.
+                new_filename = f"customer_{customer_id}_{new_file.filename}"
+                new_filepath = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+                new_file.save(new_filepath)
+
+                with open(new_filepath, 'rb') as f:
+                    img_bytes = f.read()
+                
+                embedding = embedding_model.predict(preprocess_image(img_bytes))[0]
+                embedding_list = embedding.tolist()
+
+                # Insert the new signature record.
+                cur.execute(
+                    "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
+                    (customer_id, new_filename, embedding_list)
+                )
+
+            # Commit all changes as a single transaction.
             conn.commit()
         return jsonify({'message': 'Customer updated successfully'})
     except psycopg2.IntegrityError:
@@ -331,44 +376,6 @@ def api_admin_verify_signature():
         if conn:
             conn.close()
 
-@app.route('/api/admin/signature/upload', methods=['POST'])
-@admin_required
-def api_admin_upload_signature():
-    # Admin uploads a signature ON BEHALF of a customer.
-    if 'customer_id' not in request.form:
-        return jsonify({'error': 'customer_id is required in form data'}), 400
-    if 'signature_file' not in request.files:
-        return jsonify({'error': 'No signature file provided'}), 400
-
-    file = request.files['signature_file']
-    customer_id = request.form.get('customer_id')
-    
-    filename = f"customer_{customer_id}_{file.filename}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
-    conn = get_db_connection()
-    try:
-        with open(filepath, 'rb') as f:
-            img_bytes = f.read()
-        preprocessed_img = preprocess_image(img_bytes)
-        embedding = embedding_model.predict(preprocessed_img)[0]
-        embedding_list = embedding.tolist()
-
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO HandSignature (customer_id, signature_image, embedding) VALUES (%s, %s, %s)",
-                (customer_id, filename, embedding_list)
-            )
-            conn.commit()
-        return jsonify({'message': 'Signature uploaded successfully for customer ' + str(customer_id)})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'error': f'Failed to process signature: {str(e)}'}), 500
-    finally:
-        if conn:
-            conn.close()
-
 #@cross_origin(supports_credentials=True)
 @app.route('/api/admin/customer/<int:customer_id>', methods=['DELETE'])
 @admin_required
@@ -395,6 +402,12 @@ def api_delete_customer(customer_id):
 # ===================================================================
 #                       MAIN EXECUTION BLOCK
 # ===================================================================
+with app.app_context():
+    print("--- REGISTERED URL ROUTES ---")
+    for rule in app.url_map.iter_rules():
+        print(f"Endpoint: {rule.endpoint}, Methods: {rule.methods}, URL: {rule}")
+    print("-----------------------------")
+
 if __name__ == '__main__':
     # We need to import wraps for our decorator
     app.run(host='0.0.0.0', port=5001, debug=True)

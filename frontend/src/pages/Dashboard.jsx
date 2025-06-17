@@ -22,11 +22,6 @@ function Dashboard() {
             </Link>
           </li>
           <li>
-            <Link to="/upload-signature">
-               <button>Upload Reference Signature</button>
-            </Link>
-          </li>
-          <li>
             <Link to="/manage-customers">
             <button>Manage Customers</button>
             </Link>

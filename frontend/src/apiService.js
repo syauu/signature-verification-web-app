@@ -20,17 +20,7 @@ async function handleResponse(response) {
   }
 }
 
-export async function createCustomerWithSignature(formData) {
-  // We pass the FormData object directly to the body.
-  // The browser will automatically set the correct 'multipart/form-data' header.
-  const response = await fetchWithCredentials(`${API_URL}/admin/customer_with_signature`, {
-    method: 'POST',
-    body: formData,
-  });
-  return handleResponse(response);
-}
-
-// New function for admin login
+// --- Auth Functions ---
 export async function adminLogin(email, password) {
   const response = await fetchWithCredentials(`${API_URL}/login`, {
     method: 'POST',
@@ -47,44 +37,10 @@ export async function logout() {
   return handleResponse(response);
 }
 
-// Add this function to get all customers
+// --- Customer Management Functions ---
 export async function getCustomers() {
   const response = await fetchWithCredentials(`${API_URL}/admin/customers`, {
     method: 'GET',
-  });
-  return handleResponse(response);
-}
-
-// Add this function for verifying a signature
-export async function verifySignature(nationalId, signatureFile) {
-  const formData = new FormData();
-  formData.append('national_id', nationalId);
-  formData.append('signature_file', signatureFile);
-
-  const response = await fetchWithCredentials(`${API_URL}/admin/signature/verify`, {
-    method: 'POST',
-    body: formData, // Note: We don't set Content-Type header when using FormData
-  });
-  return handleResponse(response);
-}
-
-export async function uploadReferenceSignature(customerId, signatureFile) {
-  const formData = new FormData();
-  formData.append('customer_id', customerId);
-  formData.append('signature_file', signatureFile);
-
-  const response = await fetchWithCredentials(`${API_URL}/admin/signature/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-  return handleResponse(response);
-}
-
-export async function updateCustomer(customerId, customerData) {
-  const response = await fetchWithCredentials(`${API_URL}/admin/customer/${customerId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(customerData),
   });
   return handleResponse(response);
 }
@@ -96,9 +52,38 @@ export async function getCustomerDetails(customerId) {
   return handleResponse(response);
 }
 
+export async function createCustomerWithSignature(formData) {
+  const response = await fetchWithCredentials(`${API_URL}/admin/customer_with_signature`, {
+    method: 'POST',
+    body: formData,
+  });
+  return handleResponse(response);
+}
+
+export async function updateCustomer(customerId, formData) {
+  const response = await fetchWithCredentials(`${API_URL}/admin/customer/${customerId}`, {
+    method: 'PUT',
+    body: formData,
+  });
+  return handleResponse(response);
+}
+
 export async function deleteCustomer(customerId) {
   const response = await fetchWithCredentials(`${API_URL}/admin/customer/${customerId}`, {
     method: 'DELETE',
+  });
+  return handleResponse(response);
+}
+
+// --- Signature Management Functions ---
+export async function verifySignature(nationalId, signatureFile) {
+  const formData = new FormData();
+  formData.append('national_id', nationalId);
+  formData.append('signature_file', signatureFile);
+
+  const response = await fetchWithCredentials(`${API_URL}/admin/signature/verify`, {
+    method: 'POST',
+    body: formData,
   });
   return handleResponse(response);
 }

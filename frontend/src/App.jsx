@@ -4,7 +4,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import RegisterCustomerPage from './pages/RegisterCustomerPage';
 import VerifySignature from './pages/VerifySignature';
-import UploadSignature from './pages/UploadSignature';
 import ManageCustomers from './pages/ManageCustomers';
 import EditCustomer from './pages/EditCustomer';
 
@@ -25,7 +24,6 @@ function App() {
             {/* Admin-only pages */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/register-customer" element={<RegisterCustomerPage />} />
-            <Route path="/upload-signature" element={<UploadSignature />} />
             <Route path="/manage-customers" element={<ManageCustomers />} /> 
             <Route path="/edit-customer/:customerId" element={<EditCustomer />} />
             <Route path="/verify-signature" element={<VerifySignature />} />
