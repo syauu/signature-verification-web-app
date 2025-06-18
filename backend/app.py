@@ -61,7 +61,7 @@ def adapt_numpy_array(numpy_array):
 register_adapter(np.ndarray, adapt_numpy_array)
 
 def preprocess_image(image_bytes):
-    img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+    img = Image.open(io.BytesIO(image_bytes)).convert('L')
     img = img.resize((224, 224))
     img_array = np.array(img) / 255.0
     img_array = 1.0 - img_array
