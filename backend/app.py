@@ -352,7 +352,7 @@ def api_admin_verify_signature():
     file = request.files['signature_file']
     national_id = request.form.get('national_id')
     admin_id = session['user_id']
-    optimal_threshold = 1.4698  # The threshold from model evaluation
+    optimal_threshold = 10.9226  # The threshold from model evaluation
 
     conn = get_db_connection()
     try:
