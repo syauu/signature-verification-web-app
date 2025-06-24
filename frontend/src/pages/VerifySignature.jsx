@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { verifySignature } from '../apiService';
 
+// --- Import React Bootstrap components ---
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
+import Container from 'react-bootstrap/Container';
+import Card from 'react-bootstrap/Card';
+import Alert from 'react-bootstrap/Alert';
+
 function VerifySignature() {
-  // State for managing the component
   const [nationalId, setNationalId] = useState('');
   const [signatureFile, setSignatureFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState('');
-
 
   const handleFileChange = (e) => {
     setSignatureFile(e.target.files[0]);
@@ -43,55 +48,64 @@ function VerifySignature() {
     document.getElementById('sig-file').value = '';
   };
 
-  // If there is a result, show the result page
+  // If there is a result, show the result view
   if (verificationResult) {
+    const isSuccess = verificationResult.is_verified;
     return (
-      <div>
-        <h2>Result</h2>
-        {verificationResult.is_verified ? (
-            <div style={{ color: 'green', border: '2px solid green', padding: '20px' }}>
-                <h1>SUCCESS</h1>
-                <p>The hand signature is a {verificationResult.match_percentage}% match.</p>
-            </div>
-        ) : (
-            <div style={{ color: 'red', border: '2px solid red', padding: '20px' }}>
-                <h1>FAILED</h1>
-                <p>The signature does not appear to be a match.</p>
-            </div>
-        )}
-        <p>(Distance: {verificationResult.distance.toFixed(4)} / Threshold: {verificationResult.threshold})</p>
-        <button onClick={handleReset}>Verify Another Signature </button>
-      </div>
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+        <Card className="w-100 text-center" style={{ maxWidth: '500px' }}>
+          <Card.Header as="h2">Result</Card.Header>
+          <Card.Body>
+            <Alert variant={isSuccess ? 'success' : 'danger'}>
+              <Alert.Heading>{isSuccess ? 'SUCCESS' : 'FAILED'}</Alert.Heading>
+              <p className="mb-0">
+                The hand signature is a {verificationResult.match_percentage}% match.
+              </p>
+            </Alert>
+            <Card.Text className="text-muted mt-3">
+              (Distance: {verificationResult.distance.toFixed(4)} / Threshold: {verificationResult.threshold})
+            </Card.Text>
+            <Button variant="primary" onClick={handleReset} className="mt-3">
+              Verify Another Signature
+            </Button>
+          </Card.Body>
+        </Card>
+      </Container>
     );
   }
 
-  // Default view: Show the selection and upload form
+  // Default view: Show the verification form
   return (
-    <div>
-      <Link to="/dashboard">Back to Dashboard</Link>
-      <h2>Verify Signature</h2>
-      <form onSubmit={handleSubmit}>
-        {/* Step 1: Select a Customer */}
-        <label htmlFor="national-id-input">Customer National ID:</label>
-        <input
-          id="national-id-input"
-          type="text"
-          value={nationalId}
-          onChange={(e) => setNationalId(e.target.value)}
-          placeholder="Enter National ID to verify"
-          required
-        />
-        <br /><br />
-        {/* Step 2: Upload Signature File */}
-        <label htmlFor="sig-file">Provide Signature to Verify:</label> <br />
-        <input type="file" id="sig-file" onChange={handleFileChange} required />
-        <br /><br />
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Verifying...' : 'Submit'}
-        </button>
-      </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </div>
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+      <Card className="w-100" style={{ maxWidth: '600px' }}>
+        <Card.Body>
+          <div className="text-center mb-4">
+            <h2 className="mb-2">Verify Signature</h2>
+            <Link to="/dashboard">Back to Dashboard</Link>
+          </div>
+          {error && <Alert variant="danger">{error}</Alert>}
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Customer National ID</Form.Label>
+              <Form.Control
+                type="text"
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
+                placeholder="Enter National ID to verify"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Signature to Verify</Form.Label>
+              <Form.Control type="file" id="sig-file" onChange={handleFileChange} required />
+            </Form.Group>
+            <Button disabled={isLoading} className="w-100 mt-3" type="submit">
+              {isLoading ? 'Verifying...' : 'Verify'}
+            </Button>
+          </Form>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }
 

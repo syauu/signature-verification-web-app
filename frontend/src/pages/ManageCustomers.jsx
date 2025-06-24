@@ -1,8 +1,14 @@
-// frontend/src/pages/ManageCustomers.jsx
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCustomers, deleteCustomer } from '../apiService';
+
+// --- Import React Bootstrap components ---
+import Container from 'react-bootstrap/Container';
+import Table from 'react-bootstrap/Table';
+import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
+import Alert from 'react-bootstrap/Alert';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
 
 function ManageCustomers() {
   const [customers, setCustomers] = useState([]);
@@ -14,11 +20,10 @@ function ManageCustomers() {
     try {
       setIsLoading(true);
       const data = await getCustomers();
-      // Ensure the data is an array before setting it
       if (Array.isArray(data)) {
         setCustomers(data);
       } else {
-        setCustomers([]); // Set to empty array if data is not as expected
+        setCustomers([]);
       }
       setError('');
     } catch (err) {
@@ -35,12 +40,9 @@ function ManageCustomers() {
 
   // This function handles the delete action.
   const handleDeleteClick = async (customerId, customerName) => {
-    // Confirmation dialog is a good practice.
     if (window.confirm(`Are you sure you want to delete ${customerName}? This action cannot be undone.`)) {
       try {
         await deleteCustomer(customerId);
-        // After deleting from the DB, filter the customer out of the local state
-        // to instantly update the UI without a page reload.
         setCustomers(currentCustomers =>
           currentCustomers.filter(c => c.customer_id !== customerId)
         );
@@ -51,44 +53,60 @@ function ManageCustomers() {
   };
 
   if (isLoading) {
-    return <div>Loading customers...</div>;
+    return (
+        <Container className="text-center p-5">
+            <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading...</span>
+            </Spinner>
+        </Container>
+    );
   }
 
   return (
-    <div>
-      <Link to="/dashboard">Back to Dashboard</Link>
-      <h2>Manage Customers</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <Container className="py-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manage Customers</h2>
+        <Link to="/dashboard">
+          <Button variant="secondary" className="ms-4">Back to Dashboard</Button>
+        </Link>
+      </div>
+      
+      {error && <Alert variant="danger">{error}</Alert>}
+      
+      <Table striped bordered hover responsive>
         <thead>
-          <tr style={{ borderBottom: '2px solid white' }}>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Name</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>National ID</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Actions</th>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>National ID</th>
+            <th className="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {customers.map((customer) => (
-            <tr key={customer.customer_id} style={{ borderBottom: '1px solid grey' }}>
-              <td style={{ padding: '8px' }}>{customer.customer_name}</td>
-              <td style={{ padding: '8px' }}>{customer.customer_email}</td>
-              {/* This will now display the national_id from the API, or 'N/A' if it's null */}
-              <td style={{ padding: '8px' }}>{customer.national_id || 'N/A'}</td>
-              <td style={{ padding: '8px' }}>
-                <Link to={`/edit-customer/${customer.customer_id}`}>
-                  <button style={{ marginRight: '10px' }}>Edit</button>
-                </Link>
-                {/* The onClick handler calls our delete function with the correct arguments */}
-                <button onClick={() => handleDeleteClick(customer.customer_id, customer.customer_name)}>
-                  Delete
-                </button>
+            <tr key={customer.customer_id}>
+              <td>{customer.customer_name}</td>
+              <td>{customer.customer_email}</td>
+              <td>{customer.national_id || 'N/A'}</td>
+              <td className="text-center">
+                <ButtonGroup>
+                  <Link to={`/edit-customer/${customer.customer_id}`}>
+                    <Button variant="primary" size="sm">Edit</Button>
+                  </Link>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDeleteClick(customer.customer_id, customer.customer_name)}
+                  >
+                    Delete
+                  </Button>
+                </ButtonGroup>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+      </Table>
+    </Container>
   );
 }
 

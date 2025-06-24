@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCustomerDetails, updateCustomer } from '../apiService';
 
+// --- Import React Bootstrap components ---
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
+import Container from 'react-bootstrap/Container';
+import Card from 'react-bootstrap/Card';
+import Alert from 'react-bootstrap/Alert';
+import Spinner from 'react-bootstrap/Spinner';
+
 function EditCustomer() {
-  // useParams() correctly reads the ':customerId' part from the URL
   const { customerId } = useParams();
   const navigate = useNavigate();
-  
-  const [customerData, setCustomerData] = useState({
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
-    national_id: '',
-  });
-  const [signatureFile, setSignatureFile] = useState(null); // Keep file state separate
+
+  const [customerData, setCustomerData] = useState(null);
+  const [signatureFile, setSignatureFile] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +46,8 @@ function EditCustomer() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setMessage('');
+    setError('');
     
     const formData = new FormData();
     formData.append('customer_name', customerData.customer_name);
@@ -56,7 +60,6 @@ function EditCustomer() {
     }
 
     try {
-      // Here, customerId from useParams is passed to the API service
       const data = await updateCustomer(customerId, formData);
       setMessage(data.message);
       setTimeout(() => navigate('/manage-customers'), 1500);
@@ -67,34 +70,64 @@ function EditCustomer() {
     }
   };
 
+  // Display a loading spinner while fetching initial data
+  if (!customerData) {
+    return (
+      <Container className="text-center p-5">
+        <Spinner animation="border" />
+        <p>Loading Customer Details...</p>
+      </Container>
+    );
+  }
+
   return (
-    <div>
-      <Link to="/manage-customers">Back to Manage Customers</Link>
-      <h2>Edit Customer: {customerData.customer_name}</h2>
-      <form onSubmit={handleSubmit}>
-        <label>Name:</label><br />
-        <input type="text" name="customer_name" value={customerData.customer_name || ''} onChange={handleChange} required /><br /><br />
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+      <Card className="w-100" style={{ maxWidth: '600px' }}>
+        <Card.Body>
+          <div className="text-center mb-4">
+            <h2 className="mb-2">Edit Customer: {customerData.customer_name}</h2>
+            <Link to="/manage-customers">Back to Manage Customers</Link>
+          </div>
+          
+          {message && <Alert variant="success">{message}</Alert>}
+          {error && <Alert variant="danger">{error}</Alert>}
 
-        <label>Email:</label><br />
-        <input type="email" name="customer_email" value={customerData.customer_email || ''} onChange={handleChange} required /><br /><br />
-        
-        <label>Phone:</label><br />
-        <input type="tel" name="customer_phone" value={customerData.customer_phone || ''} onChange={handleChange} /><br /><br />
-        
-        <label>National ID:</label><br />
-        <input type="text" name="national_id" value={customerData.national_id || ''} onChange={handleChange} required /><br /><br />
-        
-        <label>Upload New Reference Signature (Optional):</label><br/>
-        <p style={{fontSize: '0.8em', margin: '0 0 5px 0'}}>If you upload a new file, it will replace the old signature.</p>
-        <input type="file" name="signatureFile" onChange={handleFileChange} /><br/><br/>
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Name</Form.Label>
+              <Form.Control type="text" name="customer_name" value={customerData.customer_name || ''} onChange={handleChange} required />
+            </Form.Group>
 
-        <button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </form>
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" name="customer_email" value={customerData.customer_email || ''} onChange={handleChange} required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>National ID</Form.Label>
+              <Form.Control type="text" name="national_id" value={customerData.national_id || ''} onChange={handleChange} required />
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Phone</Form.Label>
+              <Form.Control type="tel" name="customer_phone" value={customerData.customer_phone || ''} onChange={handleChange} />
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Upload New Reference Signature (Optional)</Form.Label>
+              <Form.Text className="d-block mb-2">
+                If you upload a new file, it will replace the old signature.
+              </Form.Text>
+              <Form.Control type="file" name="signatureFile" onChange={handleFileChange} />
+            </Form.Group>
+
+            <Button disabled={isLoading} className="w-100 mt-3" type="submit">
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </Form>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }
 

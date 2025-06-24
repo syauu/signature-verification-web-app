@@ -1,15 +1,20 @@
-// frontend/src/pages/RegisterCustomerPage.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createCustomerWithSignature } from '../apiService';
 
+// --- Import React Bootstrap components ---
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
+import Container from 'react-bootstrap/Container';
+import Card from 'react-bootstrap/Card';
+import Alert from 'react-bootstrap/Alert';
+
 function RegisterCustomerPage() {
-  // Use a single state object to hold all form data
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    nationa_id: '',
+    national_id: '', 
     signatureFile: null,
   });
   const [message, setMessage] = useState('');
@@ -36,20 +41,18 @@ function RegisterCustomerPage() {
     setMessage('');
     setIsLoading(true);
 
-    // Create a FormData object to send text and file together
     const submissionData = new FormData();
     submissionData.append('name', formData.name);
     submissionData.append('email', formData.email);
     submissionData.append('phone', formData.phone);
-    submissionData.append('signature_file', formData.signatureFile);
     submissionData.append('national_id', formData.national_id);
+    submissionData.append('signature_file', formData.signatureFile);
 
     try {
       const data = await createCustomerWithSignature(submissionData);
       setMessage(`${data.message}`);
-      // Clear form on success
-      setFormData({ name: '', email: '', phone: '', signatureFile: null });
-      e.target.reset(); // This clears the file input
+      setFormData({ name: '', email: '', phone: '', national_id: '', signatureFile: null });
+      e.target.reset();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,33 +61,53 @@ function RegisterCustomerPage() {
   };
 
   return (
-    <div>
-      <Link to="/dashboard">Back to Dashboard</Link>
-      <h2>Register New Customer & Signature</h2>
-      <p>Fill out the customer's details and upload their genuine reference signature in one step.</p>
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <label>Customer Name:</label><br />
-        <input type="text" name="name" onChange={handleTextChange} placeholder="name" required /><br /><br />
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+      <Card className="w-100" style={{ maxWidth: '600px' }}>
+        <Card.Body>
+          <div className="text-center mb-4">
+            <h2 className="mb-2">Register New Customer & Signature</h2>
+            <p className="text-muted">
+              Fill out the customer's details and upload their genuine reference signature.
+            </p>
+            <Link to="/dashboard">Back to Dashboard</Link>
+          </div>
+          
+          {message && <Alert variant="success">{message}</Alert>}
+          {error && <Alert variant="danger">{error}</Alert>}
 
-        <label>Customer National ID:</label><br />
-        <input type="text" name="national_id" onChange={handleTextChange} placeholder="National ID" required /><br /><br />
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Customer Name</Form.Label>
+              <Form.Control type="text" name="name" onChange={handleTextChange} placeholder="Enter name" required />
+            </Form.Group>
 
-        <label>Customer Email:</label><br />
-        <input type="email" name="email" onChange={handleTextChange} placeholder="email" required /><br /><br />
-        
-        <label>Customer Phone:</label><br />
-        <input type="tel" name="phone" onChange={handleTextChange} placeholder="phone number" /><br /><br />
-        
-        <label>Genuine Signature File:</label><br />
-        <input type="file" name="signatureFile" onChange={handleFileChange} required /><br /><br />
-        
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Create Customer & Save Signature'}
-        </button>
-      </form>
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Customer National ID</Form.Label>
+              <Form.Control type="text" name="national_id" onChange={handleTextChange} placeholder="Enter National ID" required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Customer Email</Form.Label>
+              <Form.Control type="email" name="email" onChange={handleTextChange} placeholder="Enter email" required />
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Customer Phone (Optional)</Form.Label>
+              <Form.Control type="tel" name="phone" onChange={handleTextChange} placeholder="Enter phone number" />
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Genuine Signature File</Form.Label>
+              <Form.Control type="file" name="signatureFile" onChange={handleFileChange} required />
+            </Form.Group>
+            
+            <Button disabled={isLoading} className="w-100 mt-3" type="submit">
+              {isLoading ? 'Saving...' : 'Create Customer & Save Signature'}
+            </Button>
+          </Form>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }
 
