@@ -33,10 +33,41 @@ function Login() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <Card className="w-100" style={{ maxWidth: '450px' }}>
+    <Container className="d-flex flex-column align-items-center justify-content-center" style={{ 
+      minHeight: 'calc(100vh - 2rem)', /* Adjusted for reduced root padding */
+      padding: '1rem'
+    }}>
+      <div className="text-center mb-4"> {/* Reduced margin */}
+        <h1 className="display-4 fw-bold mb-3" style={{ 
+          fontSize: '2.5rem', 
+          letterSpacing: '0.5px',
+          textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+          color: '#ffffff',
+          background: 'linear-gradient(45deg, #ffffff, #e3f2fd)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text'
+        }}>
+          Hand Signature Verification System
+        </h1>
+        <p className="lead" style={{ 
+          fontSize: '1.1rem',
+          color: '#b3c7f7',
+          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+        }}>
+          Secure Authentication & Digital Identity Verification
+        </p>
+      </div>
+      
+      <Card className="w-100" style={{ 
+        maxWidth: '450px',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+        borderRadius: '16px'
+      }}>
         <Card.Body className="p-4">
-          <h1 className="text-center mb-2 h3">Hand Signature Verification System</h1>
           <h2 className="text-center text-muted mb-4 h5">Admin Login</h2>
           
           {error && <Alert variant="danger">{error}</Alert>}

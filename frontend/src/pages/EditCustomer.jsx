@@ -81,12 +81,21 @@ function EditCustomer() {
   }
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <Card className="w-100" style={{ maxWidth: '600px' }}>
+    <Container className="d-flex align-items-center justify-content-center" style={{ 
+      minHeight: 'calc(100vh - 140px)', /* Account for navbar + spacing */
+      padding: '1rem'
+    }}>
+      <Card className="w-100" style={{ 
+        maxWidth: '600px',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+        borderRadius: '16px'
+      }}>
         <Card.Body>
           <div className="text-center mb-4">
             <h2 className="mb-2">Edit Customer: {customerData.customer_name}</h2>
-            <Link to="/manage-customers">Back to Manage Customers</Link>
           </div>
           
           {message && <Alert variant="success">{message}</Alert>}

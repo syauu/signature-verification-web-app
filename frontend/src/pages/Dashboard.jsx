@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { logout } from '../apiService';
+import { Link } from 'react-router-dom';
 
 // --- Import React Bootstrap components ---
 import Container from 'react-bootstrap/Container';
@@ -9,22 +8,19 @@ import Card from 'react-bootstrap/Card';
 import Stack from 'react-bootstrap/Stack';
 
 function Dashboard() {
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    // This logic does not need to change
-    try {
-      await logout();
-      navigate('/login');
-    } catch (err) {
-      console.error("Logout failed", err);
-      // You could add an alert here for a failed logout if needed
-    }
-  };
-
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <Card style={{ width: '800px' }}>
+    <Container className="d-flex align-items-center justify-content-center" style={{ 
+      minHeight: 'calc(100vh - 140px)', /* Account for navbar + spacing */
+      padding: '1rem'
+    }}>
+      <Card style={{ 
+        width: '800px',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+        borderRadius: '16px'
+      }}>
         <Card.Header as="h2" className="text-center p-3">Admin's Dashboard</Card.Header>
         <Card.Body className="p-4">
           <p className="text-center text-muted">Select an administrative action to perform.</p>
@@ -46,14 +42,6 @@ function Dashboard() {
             </Link>
 
           </Stack>
-
-          <hr className="my-4" />
-
-          <div className="d-grid">
-            <Button variant="outline-danger" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
         </Card.Body>
       </Card>
     </Container>

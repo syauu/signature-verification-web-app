@@ -1,8 +1,10 @@
 import os
-import psycopg2
-import psycopg2.extras
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS, cross_origin
+import psycopg2
+import psycopg2.extras
+from psycopg2.extensions import register_adapter, AsIs
+from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image
 from functools import wraps
@@ -10,8 +12,7 @@ import numpy as np
 import io, os
 from cryptography.fernet import Fernet
 import tensorflow as tf
-from psycopg2.extensions import register_adapter, AsIs
-from dotenv import load_dotenv
+
 
 
 # ===================================================================
@@ -83,6 +84,41 @@ def decrypt_data(encrypted_data):
         return None
     # The data from DB might be in a memoryview, convert to bytes
     return cipher_suite.decrypt(bytes(encrypted_data)).decode('utf-8')
+
+def cleanup_orphaned_signature_files():
+    """Clean up signature files that exist in filesystem but not in database."""
+    try:
+        # Get all files in upload folder
+        upload_files = set()
+        if os.path.exists(app.config['UPLOAD_FOLDER']):
+            upload_files = set(os.listdir(app.config['UPLOAD_FOLDER']))
+        
+        # Get all signature files referenced in database
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT signature_image FROM HandSignature WHERE signature_image IS NOT NULL")
+                db_files = set(row[0] for row in cur.fetchall() if row[0])
+        finally:
+            conn.close()
+        
+        # Find orphaned files
+        orphaned_files = upload_files - db_files
+        
+        # Delete orphaned files
+        for filename in orphaned_files:
+            if filename.startswith('customer_'):  # Only delete customer signature files
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                try:
+                    os.remove(file_path)
+                    print(f"Cleaned up orphaned file: {filename}")
+                except Exception as e:
+                    print(f"Error deleting orphaned file {filename}: {e}")
+                    
+        return len(orphaned_files)
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+        return 0
 
 # ===================================================================
 #                       API ENDPOINTS (MODEL B)
@@ -260,7 +296,12 @@ def api_update_customer(customer_id):
                         # Delete the old file from the /uploads folder.
                         old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], old_signature['signature_image'])
                         if os.path.exists(old_filepath):
-                            os.remove(old_filepath)
+                            try:
+                                os.remove(old_filepath)
+                                print(f"Deleted old signature file: {old_filepath}")
+                            except Exception as file_error:
+                                print(f"Warning: Could not delete old signature file {old_filepath}: {file_error}")
+                                # Continue with the operation even if file deletion fails
                         
                         # Delete the old record from the database.
                         cur.execute("DELETE FROM HandSignature WHERE signature_id = %s", (old_signature['signature_id'],))
@@ -293,7 +334,15 @@ def api_update_customer(customer_id):
 
             # Commit all changes as a single transaction.
             conn.commit()
-        return jsonify({'message': 'Customer updated successfully'})
+            
+            # Get the updated customer data to return
+            cur.execute("SELECT * FROM Customer WHERE customer_id = %s", (customer_id,))
+            updated_customer = cur.fetchone()
+            
+            # Convert RealDictRow to regular dictionary
+            updated_customer_dict = dict(updated_customer)
+            
+        return jsonify(updated_customer_dict)
     except psycopg2.IntegrityError:
         conn.rollback()
         return jsonify({'error': 'Email or National ID already exists for another customer.'}), 409
@@ -311,9 +360,16 @@ def api_get_all_customers():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT customer_id, customer_name, customer_email, national_id FROM Customer ORDER BY customer_name ASC")
+            cur.execute("SELECT customer_id, customer_name, customer_email, customer_phone, national_id FROM Customer ORDER BY customer_name ASC")
             customers = cur.fetchall()
-        return jsonify(customers)
+            
+            # Convert RealDictRow objects to regular dictionaries
+            customers_list = []
+            for customer in customers:
+                customer_dict = dict(customer)
+                customers_list.append(customer_dict)
+            
+        return jsonify(customers_list)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -332,8 +388,11 @@ def api_get_customer_details(customer_id):
         
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
-            
-        return jsonify(customer)
+        
+        # Convert RealDictRow to regular dictionary
+        customer_dict = dict(customer)
+        
+        return jsonify(customer_dict)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -416,7 +475,23 @@ def api_admin_verify_signature():
 def api_delete_customer(customer_id):
     conn = get_db_connection()
     try:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # First, get all signature files for this customer to delete them from filesystem
+            cur.execute("SELECT signature_image FROM HandSignature WHERE customer_id = %s", (customer_id,))
+            signature_files = cur.fetchall()
+            
+            # Delete signature files from filesystem
+            for signature_record in signature_files:
+                if signature_record['signature_image']:
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], signature_record['signature_image'])
+                    if os.path.exists(file_path):
+                        try:
+                            os.remove(file_path)
+                            print(f"Deleted signature file: {file_path}")
+                        except Exception as file_error:
+                            print(f"Error deleting signature file {file_path}: {file_error}")
+                            # Continue with database cleanup even if file deletion fails
+            
             # To maintain data integrity, we must delete records referencing the customer first.
             cur.execute("DELETE FROM HandSignature WHERE customer_id = %s", (customer_id,))
             cur.execute("DELETE FROM Verification WHERE customer_id = %s", (customer_id,))
@@ -433,6 +508,18 @@ def api_delete_customer(customer_id):
         if conn:
             conn.close()
 
+@app.route('/api/admin/cleanup-orphaned-files', methods=['POST'])
+@admin_required
+def api_cleanup_orphaned_files():
+    """Admin endpoint to clean up orphaned signature files."""
+    try:
+        cleaned_count = cleanup_orphaned_signature_files()
+        return jsonify({
+            'message': f'Cleanup completed. Removed {cleaned_count} orphaned files.'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ===================================================================
 #                       MAIN EXECUTION BLOCK
 # ===================================================================
@@ -441,6 +528,16 @@ with app.app_context():
     for rule in app.url_map.iter_rules():
         print(f"Endpoint: {rule.endpoint}, Methods: {rule.methods}, URL: {rule}")
     print("-----------------------------")
+    
+    # Clean up orphaned signature files on startup
+    try:
+        cleaned_count = cleanup_orphaned_signature_files()
+        if cleaned_count > 0:
+            print(f"Startup cleanup: Removed {cleaned_count} orphaned signature files.")
+        else:
+            print("Startup cleanup: No orphaned signature files found.")
+    except Exception as e:
+        print(f"Startup cleanup failed: {e}")
 
 if __name__ == '__main__':
     # We need to import wraps for our decorator

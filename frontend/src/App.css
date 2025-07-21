@@ -1,8 +1,32 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden; /* Prevent vertical scroll for the body */
+  background: linear-gradient(135deg, 
+    #1e3c72 0%, 
+    #2a5298 25%, 
+    #1e3c72 50%, 
+    #0f2557 75%, 
+    #1a237e 100%
+  );
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem; /* Reduced top padding since navbar has spacer */
   text-align: center;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .logo {

@@ -52,8 +52,18 @@ function VerifySignature() {
   if (verificationResult) {
     const isSuccess = verificationResult.is_verified;
     return (
-      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-        <Card className="w-100 text-center" style={{ maxWidth: '500px' }}>
+      <Container className="d-flex align-items-center justify-content-center" style={{ 
+        minHeight: 'calc(100vh - 140px)', /* Account for navbar + spacing */
+        padding: '1rem'
+      }}>
+        <Card className="w-100 text-center" style={{ 
+          maxWidth: '500px',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+          borderRadius: '16px'
+        }}>
           <Card.Header as="h2">Result</Card.Header>
           <Card.Body>
             <Alert variant={isSuccess ? 'success' : 'danger'}>
@@ -76,12 +86,21 @@ function VerifySignature() {
 
   // Default view: Show the verification form
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <Card className="w-100" style={{ maxWidth: '600px' }}>
+    <Container className="d-flex align-items-center justify-content-center" style={{ 
+      minHeight: 'calc(100vh - 140px)', /* Account for navbar + spacing */
+      padding: '1rem'
+    }}>
+      <Card className="w-100" style={{ 
+        maxWidth: '600px',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+        borderRadius: '16px'
+      }}>
         <Card.Body>
           <div className="text-center mb-4">
             <h2 className="mb-2">Verify Signature</h2>
-            <Link to="/dashboard">Back to Dashboard</Link>
           </div>
           {error && <Alert variant="danger">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
