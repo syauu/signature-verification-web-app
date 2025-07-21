@@ -8,6 +8,8 @@ import Form from 'react-bootstrap/Form';
 import Container from 'react-bootstrap/Container';
 import Card from 'react-bootstrap/Card';
 import Alert from 'react-bootstrap/Alert';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 function RegisterCustomerPage() {
   const [formData, setFormData] = useState({
@@ -61,61 +63,151 @@ function RegisterCustomerPage() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ 
-      minHeight: 'calc(100vh - 140px)', /* Account for navbar + spacing */
-      padding: '1rem'
+    <Container style={{ 
+      padding: '1rem',
+      minHeight: 'calc(100vh - 140px)'
     }}>
-      <Card className="w-100" style={{ 
-        maxWidth: '600px',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
-        borderRadius: '16px'
-      }}>
-        <Card.Body>
-          <div className="text-center mb-4">
-            <h2 className="mb-2">Register New Customer & Signature</h2>
-            <p className="text-muted">
-              Fill out the customer's details and upload their genuine reference signature.
+      <div className="d-flex justify-content-center">
+        <Card style={{ 
+          width: '100%',
+          maxWidth: '700px',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+          borderRadius: '16px'
+        }}>
+          <Card.Header className="text-center p-4" style={{ 
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.3)'
+          }}>
+            <h2 style={{ 
+              margin: 0, 
+              color: '#2c3e50',
+              fontWeight: 'bold',
+              textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+            }}>
+              Register New Customer
+            </h2>
+            <p className="text-muted mb-0 mt-2">
+              Add a new customer with their signature to the verification system
             </p>
-          </div>
+          </Card.Header>
+          <Card.Body className="p-4">
           
-          {message && <Alert variant="success">{message}</Alert>}
-          {error && <Alert variant="danger">{error}</Alert>}
+            {message && <Alert variant="success">{message}</Alert>}
+            {error && <Alert variant="danger">{error}</Alert>}
 
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Customer Name</Form.Label>
-              <Form.Control type="text" name="name" onChange={handleTextChange} placeholder="Enter name" required />
-            </Form.Group>
+            <Form onSubmit={handleSubmit}>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Customer Name</Form.Label>
+                    <Form.Control 
+                      type="text" 
+                      name="name" 
+                      onChange={handleTextChange} 
+                      placeholder="Enter full name" 
+                      required 
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>National ID</Form.Label>
+                    <Form.Control 
+                      type="text" 
+                      name="national_id" 
+                      onChange={handleTextChange} 
+                      placeholder="Enter National ID" 
+                      required 
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Customer National ID</Form.Label>
-              <Form.Control type="text" name="national_id" onChange={handleTextChange} placeholder="Enter National ID" required />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Customer Email</Form.Label>
-              <Form.Control type="email" name="email" onChange={handleTextChange} placeholder="Enter email" required />
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Customer Phone (Optional)</Form.Label>
-              <Form.Control type="tel" name="phone" onChange={handleTextChange} placeholder="Enter phone number" />
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Genuine Signature File</Form.Label>
-              <Form.Control type="file" name="signatureFile" onChange={handleFileChange} required />
-            </Form.Group>
-            
-            <Button disabled={isLoading} className="w-100 mt-3" type="submit">
-              {isLoading ? 'Saving...' : 'Create Customer & Save Signature'}
-            </Button>
-          </Form>
-        </Card.Body>
-      </Card>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Email Address</Form.Label>
+                    <Form.Control 
+                      type="email" 
+                      name="email" 
+                      onChange={handleTextChange} 
+                      placeholder="Enter email address" 
+                      required 
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Phone Number (Optional)</Form.Label>
+                    <Form.Control 
+                      type="tel" 
+                      name="phone" 
+                      onChange={handleTextChange} 
+                      placeholder="Enter phone number" 
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-bold">
+                  Genuine Signature File
+                </Form.Label>
+                <Form.Text className="d-block mb-2 text-muted">
+                  Upload a clear image of the customer's authentic signature for verification purposes.
+                </Form.Text>
+                <Form.Control 
+                  type="file" 
+                  name="signatureFile" 
+                  onChange={handleFileChange} 
+                  accept="image/png,image/jpeg,image/jpg"
+                  className="mb-2"
+                  required 
+                />
+                {formData.signatureFile && (
+                  <div className="mt-2">
+                    <small className="text-success">
+                      ✅ Selected: {formData.signatureFile.name} ({(formData.signatureFile.size / 1024).toFixed(1)} KB)
+                    </small>
+                  </div>
+                )}
+                <Form.Text className="text-muted">
+                  Supported formats: PNG, JPEG, JPG (Max 5MB)
+                </Form.Text>
+              </Form.Group>
+              
+              <div className="d-flex justify-content-between gap-3">
+                <Button 
+                  as={Link} 
+                  to="/dashboard" 
+                  variant="outline-secondary"
+                  size="lg"
+                  style={{ width: '150px' }}
+                >
+                  ← Back
+                </Button>
+                <Button 
+                  disabled={isLoading} 
+                  type="submit"
+                  variant="success"
+                  size="lg"
+                  style={{ 
+                    flex: 1,
+                    backgroundColor: 'rgba(40, 167, 69, 0.9)',
+                    border: '1px solid rgba(40, 167, 69, 0.5)',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {isLoading ? '🔄 Creating Customer...' : 'Create Customer & Save Signature'}
+                </Button>
+              </div>
+            </Form>
+          </Card.Body>
+        </Card>
+      </div>
     </Container>
   );
 }
