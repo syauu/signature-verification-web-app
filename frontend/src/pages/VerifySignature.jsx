@@ -211,7 +211,7 @@ function VerifySignature() {
                 {signatureFile && (
                   <div className="mt-2">
                     <small className="text-success">
-                      ✅ Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
+                      Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
                     </small>
                   </div>
                 )}

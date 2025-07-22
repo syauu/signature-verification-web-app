@@ -157,7 +157,7 @@ function RegisterCustomerPage() {
                   Genuine Signature File
                 </Form.Label>
                 <Form.Text className="d-block mb-2 text-muted">
-                  Upload a clear image of the customer's authentic signature for verification purposes.
+                  Upload a clear image of the customer's signature.
                 </Form.Text>
                 <Form.Control 
                   type="file" 
@@ -170,7 +170,7 @@ function RegisterCustomerPage() {
                 {formData.signatureFile && (
                   <div className="mt-2">
                     <small className="text-success">
-                      ✅ Selected: {formData.signatureFile.name} ({(formData.signatureFile.size / 1024).toFixed(1)} KB)
+                      Selected: {formData.signatureFile.name} ({(formData.signatureFile.size / 1024).toFixed(1)} KB)
                     </small>
                   </div>
                 )}
