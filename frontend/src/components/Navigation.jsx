@@ -204,7 +204,7 @@ function Navigation() {
                   backgroundColor: 'rgba(220, 53, 69, 0.1)',
                 }}
               >
-                🚪 Logout
+                Logout
               </Button>
             </Nav>
           </Offcanvas.Body>

@@ -377,10 +377,15 @@ function ManageCustomers() {
               padding: '3rem'
             }}>
               <div>
-                <h3 className="text-muted mb-4">👥 Customer Management</h3>
+                <h3 className="text-muted mb-4">Customer Management</h3>
                 <p className="lead mb-4">
                   Select a customer from the list to edit their information
                 </p>
+                <div className="mb-4">
+                  <Badge bg="info" className="fs-6">
+                    {customers.length} customers registered
+                  </Badge>
+                </div>
                 <div className="d-flex justify-content-center gap-3">
                   <Button
                     as={Link}
@@ -390,11 +395,6 @@ function ManageCustomers() {
                   >
                     Add New Customer
                   </Button>
-                </div>
-                <div className="mt-4">
-                  <Badge bg="info" className="fs-6">
-                    {customers.length} customers registered
-                  </Badge>
                 </div>
               </div>
             </Card>
