@@ -132,7 +132,7 @@ function VerifySignature() {
                   variant="outline-secondary"
                   size="lg"
                 >
-                  🏠 Back to Dashboard
+                  Back to Dashboard
                 </Button>
               </div>
             </Card.Body>
@@ -195,7 +195,7 @@ function VerifySignature() {
               
               <Form.Group className="mb-4">
                 <Form.Label className="fw-bold">
-                  🖊️ Signature to Verify
+                  Signature to Verify
                 </Form.Label>
                 <Form.Text className="d-block mb-2 text-muted">
                   Upload the signature image that you want to verify against the registered signature.

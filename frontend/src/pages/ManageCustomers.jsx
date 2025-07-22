@@ -325,7 +325,7 @@ function ManageCustomers() {
                     <Col md={12}>
                       <Form.Group className="mb-4">
                         <Form.Label className="fw-bold">
-                          🖊️ Update Signature (Optional)
+                          Update Signature (Optional)
                         </Form.Label>
                         <Form.Text className="d-block mb-2 text-muted">
                           Upload a new signature image to replace the current one. Leave empty to keep existing signature.
@@ -353,13 +353,13 @@ function ManageCustomers() {
 
                   <div className="d-flex justify-content-between">
                     <Button variant="primary" type="submit">
-                      {signatureFile ? '💾 Update Customer & Signature' : '💾 Update Customer'}
+                      {signatureFile ? 'Update Customer & Signature' : 'Update Customer'}
                     </Button>
                     <Button
                       variant="danger"
                       onClick={() => handleDeleteClick(selectedCustomer.customer_id, selectedCustomer.customer_name)}
                     >
-                      🗑️ Delete Customer
+                      Delete Customer
                     </Button>
                   </div>
                 </Form>
@@ -388,7 +388,7 @@ function ManageCustomers() {
                     variant="success"
                     size="lg"
                   >
-                    ➕ Add New Customer
+                    Add New Customer
                   </Button>
                 </div>
                 <div className="mt-4">
