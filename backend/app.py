@@ -12,6 +12,7 @@ import numpy as np
 import io, os
 from cryptography.fernet import Fernet
 import tensorflow as tf
+from datetime import datetime
 
 
 
@@ -226,7 +227,9 @@ def api_create_customer_and_signature():
             original_data = file.read() # Read the file's binary content
             encrypted_data = cipher_suite.encrypt(original_data)
 
-            filename = f"customer_{customer_id}_{file.filename}"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_extension = os.path.splitext(file.filename)[1]  # Get file extension
+            filename = f"customer_{customer_id}_{timestamp}{file_extension}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             with open(filepath, 'wb') as f_encrypted:
                 f_encrypted.write(encrypted_data)
@@ -314,8 +317,10 @@ def api_update_customer(customer_id):
                     # 2. Encrypt the data using the cipher_suite defined at the top of your app
                     encrypted_data = cipher_suite.encrypt(original_data)
                     
-                    # 3. Save the ENCRYPTED data to the new file
-                    new_filename = f"customer_{customer_id}_{new_file.filename}"
+                    # 3. Save the ENCRYPTED data to the new file with timestamp for uniqueness
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    file_extension = os.path.splitext(new_file.filename)[1]  # Get file extension
+                    new_filename = f"customer_{customer_id}_{timestamp}{file_extension}"
                     new_filepath = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
                     with open(new_filepath, 'wb') as f_encrypted:
                         f_encrypted.write(encrypted_data)
