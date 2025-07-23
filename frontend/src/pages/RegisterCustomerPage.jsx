@@ -151,7 +151,7 @@ function RegisterCustomerPage() {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Phone Number (Optional)</Form.Label>
+                    <Form.Label>Phone Number</Form.Label>
                     <Form.Control 
                       type="tel" 
                       name="phone" 
@@ -167,7 +167,7 @@ function RegisterCustomerPage() {
                   Genuine Signature
                 </Form.Label>
                 <Form.Text className="d-block mb-3 text-muted">
-                  Provide the customer's authentic signature for verification purposes.
+                  Provide the customer's signature for verification purposes.
                 </Form.Text>
                 
                 {/* Signature Input Method Selection */}
@@ -180,7 +180,7 @@ function RegisterCustomerPage() {
                         setFormData({...formData, signatureFile: null});
                       }}
                     >
-                      📁 Upload Image
+                      Upload Image
                     </Button>
                     <Button
                       variant={signatureInputMethod === 'draw' ? 'primary' : 'outline-primary'}
@@ -189,7 +189,7 @@ function RegisterCustomerPage() {
                         setFormData({...formData, signatureFile: null});
                       }}
                     >
-                      ✏️ Draw Signature
+                      Draw Signature
                     </Button>
                   </ButtonGroup>
                 </div>
@@ -227,7 +227,7 @@ function RegisterCustomerPage() {
                       height={500}
                     />
                     <Form.Text className="text-muted mt-2 d-block">
-                      Use your Huion tablet with pressure sensitivity for the best signature quality.
+
                     </Form.Text>
                   </div>
                 )}
