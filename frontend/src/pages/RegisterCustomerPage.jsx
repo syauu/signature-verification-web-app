@@ -12,6 +12,8 @@ import Alert from 'react-bootstrap/Alert';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Toast from 'react-bootstrap/Toast';
+import ToastContainer from 'react-bootstrap/ToastContainer';
 
 function RegisterCustomerPage() {
   const [formData, setFormData] = useState({
@@ -25,6 +27,7 @@ function RegisterCustomerPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const handleTextChange = (e) => {
     setFormData({
@@ -63,6 +66,7 @@ function RegisterCustomerPage() {
     try {
       const data = await createCustomerWithSignature(submissionData);
       setMessage(`${data.message}`);
+      setShowSuccessToast(true);
       setFormData({ name: '', email: '', phone: '', national_id: '', signatureFile: null });
       e.target.reset();
     } catch (err) {
@@ -105,7 +109,6 @@ function RegisterCustomerPage() {
           </Card.Header>
           <Card.Body className="p-4">
           
-            {message && <Alert variant="success">{message}</Alert>}
             {error && <Alert variant="danger">{error}</Alert>}
 
             <Form onSubmit={handleSubmit}>
@@ -263,6 +266,18 @@ function RegisterCustomerPage() {
         </Card>
         </Col>
       </Row>
+
+      {/* Success Toast */}
+      <ToastContainer position="top-end" className="p-3">
+        <Toast show={showSuccessToast} onClose={() => setShowSuccessToast(false)} delay={4000} autohide>
+          <Toast.Header>
+            <strong className="me-auto">✅ Success</strong>
+          </Toast.Header>
+          <Toast.Body>
+            {message}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
     </Container>
   );
 }

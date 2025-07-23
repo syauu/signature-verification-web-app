@@ -16,6 +16,8 @@ import Col from 'react-bootstrap/Col';
 import Badge from 'react-bootstrap/Badge';
 import Offcanvas from 'react-bootstrap/Offcanvas';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Toast from 'react-bootstrap/Toast';
+import ToastContainer from 'react-bootstrap/ToastContainer';
 
 function ManageCustomers() {
   const fileInputRef = useRef(null);
@@ -36,6 +38,7 @@ function ManageCustomers() {
   const [drawnSignature, setDrawnSignature] = useState(null);
   const [updateMessage, setUpdateMessage] = useState('');
   const [updateError, setUpdateError] = useState('');
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // This function fetches the fresh list of customers from the backend.
   const fetchCustomers = async () => {
@@ -185,6 +188,7 @@ function ManageCustomers() {
       console.log('Updated customer response:', updatedCustomer);
       
       setUpdateMessage('Customer updated successfully!');
+      setShowSuccessToast(true);
       
       // Update the customer in the list - ensure we have all the required fields
       if (updatedCustomer && updatedCustomer.customer_id) {
@@ -294,7 +298,6 @@ function ManageCustomers() {
                 </Button>
               </Card.Header>
               <Card.Body>
-                {updateMessage && <Alert variant="success">{updateMessage}</Alert>}
                 {updateError && <Alert variant="danger">{updateError}</Alert>}
                 
                 <Form onSubmit={handleUpdateSubmit}>
@@ -556,6 +559,18 @@ function ManageCustomers() {
           </Offcanvas>
         </Col>
       </Row>
+
+      {/* Success Toast */}
+      <ToastContainer position="top-end" className="p-3">
+        <Toast show={showSuccessToast} onClose={() => setShowSuccessToast(false)} delay={4000} autohide>
+          <Toast.Header>
+            <strong className="me-auto">✅ Success</strong>
+          </Toast.Header>
+          <Toast.Body>
+            {updateMessage}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
     </Container>
   );
 }

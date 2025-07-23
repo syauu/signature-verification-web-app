@@ -185,7 +185,7 @@ function VerifySignature() {
               Verify Signature
             </h2>
             <p className="text-muted mb-0 mt-2">
-              Provide a signature to verify against registered customer signatures
+
             </p>
           </Card.Header>
           <Card.Body className="p-4">
@@ -198,7 +198,7 @@ function VerifySignature() {
                   type="text"
                   value={nationalId}
                   onChange={(e) => setNationalId(e.target.value)}
-                  placeholder="Enter National ID to verify signature against"
+                  placeholder="Enter National ID"
                   required
                   size="lg"
                 />
