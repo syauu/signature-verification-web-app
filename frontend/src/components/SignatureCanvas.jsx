@@ -3,7 +3,7 @@ import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 
-const SignatureCanvas = ({ onSignatureChange, width = 500, height = 500 }) => {
+const SignatureCanvas = ({ onSignatureChange, width = 400, height = 400 }) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -229,6 +229,60 @@ const SignatureCanvas = ({ onSignatureChange, width = 500, height = 500 }) => {
     setLastPoint(currentPoint);
   };
 
+  // Function to find the bounding box of all drawn strokes
+  const getSignatureBounds = (canvas) => {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = 0;
+    let maxY = 0;
+    let hasContent = false;
+    
+    // Scan through all pixels to find non-white pixels (signature strokes)
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const index = (y * canvas.width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const a = data[index + 3];
+        
+        // Check if pixel is not white (has stroke content)
+        if (!(r === 255 && g === 255 && b === 255) || a < 255) {
+          hasContent = true;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    
+    if (!hasContent) {
+      // If no content found, return small centered area
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      return {
+        x: centerX - 50,
+        y: centerY - 50,
+        width: 100,
+        height: 100
+      };
+    }
+    
+    // Add padding around the signature
+    const padding = 20;
+    return {
+      x: Math.max(0, minX - padding),
+      y: Math.max(0, minY - padding),
+      width: Math.min(canvas.width, maxX - minX + (padding * 2)),
+      height: Math.min(canvas.height, maxY - minY + (padding * 2))
+    };
+  };
+
   // Handle drawing end
   const handleDrawEnd = () => {
     if (!isDrawing) return;
@@ -242,29 +296,63 @@ const SignatureCanvas = ({ onSignatureChange, width = 500, height = 500 }) => {
     }
     setStrokePoints([]);
     
-    // Create a temporary canvas to resize to 224x224 for saving
+    // Create cropped and resized signature for saving
     setTimeout(() => {
       const canvas = canvasRef.current;
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
       
-      // Set temp canvas to exactly 224x224
-      tempCanvas.width = 224;
-      tempCanvas.height = 224;
+      // Find the bounding box of the signature
+      const bounds = getSignatureBounds(canvas);
+      
+      // Create temporary canvas for cropping
+      const cropCanvas = document.createElement('canvas');
+      const cropCtx = cropCanvas.getContext('2d');
+      
+      // Set crop canvas size to the signature bounds
+      cropCanvas.width = bounds.width;
+      cropCanvas.height = bounds.height;
       
       // Fill with white background
-      tempCtx.fillStyle = '#ffffff';
-      tempCtx.fillRect(0, 0, 224, 224);
+      cropCtx.fillStyle = '#ffffff';
+      cropCtx.fillRect(0, 0, bounds.width, bounds.height);
       
-      // Draw the main canvas scaled down to 224x224
-      tempCtx.drawImage(
-        canvas, 
-        0, 0, actualWidth, actualHeight,
-        0, 0, 224, 224
+      // Copy only the signature area from the main canvas
+      cropCtx.drawImage(
+        canvas,
+        bounds.x, bounds.y, bounds.width, bounds.height,
+        0, 0, bounds.width, bounds.height
+      );
+      
+      // Create final 224x224 canvas
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d');
+      finalCanvas.width = 224;
+      finalCanvas.height = 224;
+      
+      // Fill with white background
+      finalCtx.fillStyle = '#ffffff';
+      finalCtx.fillRect(0, 0, 224, 224);
+      
+      // Calculate scaling to fit signature in 224x224 while maintaining aspect ratio
+      const scaleX = 200 / bounds.width; // Leave 12px padding on each side
+      const scaleY = 200 / bounds.height;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const scaledWidth = bounds.width * scale;
+      const scaledHeight = bounds.height * scale;
+      
+      // Center the signature in the 224x224 canvas
+      const offsetX = (224 - scaledWidth) / 2;
+      const offsetY = (224 - scaledHeight) / 2;
+      
+      // Draw the cropped signature scaled and centered
+      finalCtx.drawImage(
+        cropCanvas,
+        0, 0, bounds.width, bounds.height,
+        offsetX, offsetY, scaledWidth, scaledHeight
       );
       
       // Convert to blob and create file
-      tempCanvas.toBlob((blob) => {
+      finalCanvas.toBlob((blob) => {
         const file = new File([blob], 'signature.png', { type: 'image/png' });
         onSignatureChange(file);
       }, 'image/png', 1.0);
@@ -447,7 +535,7 @@ const SignatureCanvas = ({ onSignatureChange, width = 500, height = 500 }) => {
         {hasSignature && (
           <div className="mt-2 text-center">
             <small className="text-success">
-
+              ✅ Signature captured, cropped, and resized to 224×224
             </small>
           </div>
         )}
@@ -455,7 +543,7 @@ const SignatureCanvas = ({ onSignatureChange, width = 500, height = 500 }) => {
         {!hasSignature && (
           <div className="mt-2 text-center">
             <small className="text-muted">
-
+              Draw your signature - it will be automatically cropped and optimized
             </small>
           </div>
         )}
