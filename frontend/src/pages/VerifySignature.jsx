@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { verifySignature } from '../apiService';
+import SignatureCanvas from '../components/SignatureCanvas';
 
 // --- Import React Bootstrap components ---
 import Button from 'react-bootstrap/Button';
@@ -9,10 +10,14 @@ import Container from 'react-bootstrap/Container';
 import Card from 'react-bootstrap/Card';
 import Alert from 'react-bootstrap/Alert';
 import Badge from 'react-bootstrap/Badge';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 function VerifySignature() {
   const [nationalId, setNationalId] = useState('');
   const [signatureFile, setSignatureFile] = useState(null);
+  const [signatureInputMethod, setSignatureInputMethod] = useState('upload'); // 'upload' or 'draw'
   const [isLoading, setIsLoading] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState('');
@@ -21,10 +26,14 @@ function VerifySignature() {
     setSignatureFile(e.target.files[0]);
   };
 
+  const handleSignatureDrawn = (drawnSignatureFile) => {
+    setSignatureFile(drawnSignatureFile);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nationalId || !signatureFile) {
-      setError('Please provide a National ID and a signature file.');
+      setError('Please provide a National ID and a signature (upload or draw).');
       return;
     }
     setIsLoading(true);
@@ -44,29 +53,33 @@ function VerifySignature() {
   const handleReset = () => {
     setNationalId('');
     setSignatureFile(null);
+    setSignatureInputMethod('upload');
     setVerificationResult(null);
     setError('');
-    document.getElementById('sig-file').value = '';
+    const fileInput = document.getElementById('sig-file');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   // If there is a result, show the result view
   if (verificationResult) {
     const isSuccess = verificationResult.is_verified;
     return (
-      <Container style={{ 
+      <Container fluid style={{ 
         padding: '1rem',
         minHeight: 'calc(100vh - 140px)'
       }}>
-        <div className="d-flex justify-content-center">
-          <Card style={{ 
-            width: '100%',
-            maxWidth: '600px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
-            borderRadius: '16px'
-          }}>
+        <Row className="justify-content-center">
+          <Col xs={12} md={8} lg={6}>
+            <Card style={{ 
+              width: '100%',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+              borderRadius: '16px'
+            }}>
             <Card.Header className="text-center p-4" style={{ 
               borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
               backgroundColor: isSuccess ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)'
@@ -137,27 +150,28 @@ function VerifySignature() {
               </div>
             </Card.Body>
           </Card>
-        </div>
+          </Col>
+        </Row>
       </Container>
     );
   }
 
   // Default view: Show the verification form
   return (
-    <Container style={{ 
+    <Container fluid style={{ 
       padding: '1rem',
       minHeight: 'calc(100vh - 140px)'
     }}>
-      <div className="d-flex justify-content-center">
-        <Card style={{ 
-          width: '100%',
-          maxWidth: '600px',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
-          borderRadius: '16px'
-        }}>
+      <Row className="justify-content-center">
+        <Col xs={12} md={8} lg={6}>
+          <Card style={{ 
+            width: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+            borderRadius: '16px'
+          }}>
           <Card.Header className="text-center p-4" style={{ 
             borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
             backgroundColor: 'rgba(255, 255, 255, 0.3)'
@@ -171,7 +185,7 @@ function VerifySignature() {
               Verify Signature
             </h2>
             <p className="text-muted mb-0 mt-2">
-              Upload a signature to verify against registered customer signatures
+              Provide a signature to verify against registered customer signatures
             </p>
           </Card.Header>
           <Card.Body className="p-4">
@@ -197,27 +211,71 @@ function VerifySignature() {
                 <Form.Label className="fw-bold">
                   Signature to Verify
                 </Form.Label>
-                <Form.Text className="d-block mb-2 text-muted">
-                  Upload the signature image that you want to verify against the registered signature.
+                <Form.Text className="d-block mb-3 text-muted">
+                  Provide the signature that you want to verify against the registered signature.
                 </Form.Text>
-                <Form.Control 
-                  type="file" 
-                  id="sig-file" 
-                  onChange={handleFileChange} 
-                  accept="image/png,image/jpeg,image/jpg"
-                  className="mb-2"
-                  required 
-                />
-                {signatureFile && (
-                  <div className="mt-2">
-                    <small className="text-success">
-                      Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
-                    </small>
+                
+                {/* Signature Input Method Selection */}
+                <div className="mb-3">
+                  <ButtonGroup className="w-100">
+                    <Button
+                      variant={signatureInputMethod === 'upload' ? 'primary' : 'outline-primary'}
+                      onClick={() => {
+                        setSignatureInputMethod('upload');
+                        setSignatureFile(null);
+                      }}
+                    >
+                      📁 Upload Image
+                    </Button>
+                    <Button
+                      variant={signatureInputMethod === 'draw' ? 'primary' : 'outline-primary'}
+                      onClick={() => {
+                        setSignatureInputMethod('draw');
+                        setSignatureFile(null);
+                      }}
+                    >
+                      ✏️ Draw Signature
+                    </Button>
+                  </ButtonGroup>
+                </div>
+
+                {/* File Upload Section */}
+                {signatureInputMethod === 'upload' && (
+                  <div>
+                    <Form.Control 
+                      type="file" 
+                      id="sig-file" 
+                      onChange={handleFileChange} 
+                      accept="image/png,image/jpeg,image/jpg"
+                      className="mb-2"
+                      required 
+                    />
+                    {signatureFile && (
+                      <div className="mt-2">
+                        <small className="text-success">
+                          ✅ Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
+                        </small>
+                      </div>
+                    )}
+                    <Form.Text className="text-muted">
+                      Supported formats: PNG, JPEG, JPG (Max 5MB)
+                    </Form.Text>
                   </div>
                 )}
-                <Form.Text className="text-muted">
-                  Supported formats: PNG, JPEG, JPG (Max 5MB)
-                </Form.Text>
+
+                {/* Signature Drawing Section */}
+                {signatureInputMethod === 'draw' && (
+                  <div>
+                    <SignatureCanvas
+                      onSignatureChange={handleSignatureDrawn}
+                      width={500}
+                      height={500}
+                    />
+                    <Form.Text className="text-muted mt-2 d-block">
+                      Draw your signature for verification. Use your Huion tablet with pressure for best results.
+                    </Form.Text>
+                  </div>
+                )}
               </Form.Group>
               
               <div className="d-flex justify-content-between gap-3">
@@ -249,7 +307,8 @@ function VerifySignature() {
             </Form>
           </Card.Body>
         </Card>
-      </div>
+        </Col>
+      </Row>
     </Container>
   );
 }

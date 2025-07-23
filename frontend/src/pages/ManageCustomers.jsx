@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getCustomers, deleteCustomer, updateCustomer } from '../apiService';
+import SignatureCanvas from '../components/SignatureCanvas';
 
 // --- Import React Bootstrap components ---
 import Container from 'react-bootstrap/Container';
@@ -14,6 +15,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Badge from 'react-bootstrap/Badge';
 import Offcanvas from 'react-bootstrap/Offcanvas';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
 
 function ManageCustomers() {
   const fileInputRef = useRef(null);
@@ -30,6 +32,8 @@ function ManageCustomers() {
     national_id: ''
   });
   const [signatureFile, setSignatureFile] = useState(null);
+  const [signatureInputMethod, setSignatureInputMethod] = useState('upload');
+  const [drawnSignature, setDrawnSignature] = useState(null);
   const [updateMessage, setUpdateMessage] = useState('');
   const [updateError, setUpdateError] = useState('');
 
@@ -90,6 +94,8 @@ function ManageCustomers() {
       setUpdateError('');
       setUpdateMessage('');
       setSignatureFile(null); // Clear signature file when selecting new customer
+      setDrawnSignature(null); // Clear drawn signature when selecting new customer
+      setSignatureInputMethod('upload'); // Reset to upload method
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -127,9 +133,30 @@ function ManageCustomers() {
       }
       
       setSignatureFile(file);
+      setDrawnSignature(null); // Clear drawn signature when uploading file
       setUpdateError('');
     } else {
       setSignatureFile(null);
+    }
+  };
+
+  // Handle signature drawing
+  const handleSignatureDrawn = (signatureFile) => {
+    setDrawnSignature(signatureFile);
+    setSignatureFile(null); // Clear uploaded file when drawing
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle signature input method change
+  const handleSignatureMethodChange = (method) => {
+    setSignatureInputMethod(method);
+    // Clear both signature methods when switching
+    setSignatureFile(null);
+    setDrawnSignature(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -147,10 +174,11 @@ function ManageCustomers() {
       submissionData.append('customer_phone', editFormData.phone);
       submissionData.append('national_id', editFormData.national_id);
       
-      // Add signature file if selected
-      if (signatureFile) {
-        submissionData.append('signature_file', signatureFile);
-        console.log('Including signature file in update:', signatureFile.name);
+      // Add signature file if selected (either uploaded or drawn)
+      const finalSignatureFile = drawnSignature || signatureFile;
+      if (finalSignatureFile) {
+        submissionData.append('signature_file', finalSignatureFile);
+        console.log('Including signature file in update:', finalSignatureFile.name);
       }
 
       const updatedCustomer = await updateCustomer(selectedCustomer.customer_id, submissionData);
@@ -172,6 +200,7 @@ function ManageCustomers() {
         
         // Clear signature file after successful update
         setSignatureFile(null);
+        setDrawnSignature(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -190,6 +219,7 @@ function ManageCustomers() {
         
         // Clear signature file after update
         setSignatureFile(null);
+        setDrawnSignature(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -218,32 +248,32 @@ function ManageCustomers() {
   }
 
   return (
-    <Container style={{ 
-      padding: '1rem',
+    <Container fluid style={{ 
+      padding: '1rem 2rem',
       minHeight: 'calc(100vh - 140px)'
     }}>
-      {/* Header with customer list toggle */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 style={{ color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-          Manage Customers
-        </h2>
-        <Button
-          variant="outline-light"
-          onClick={() => setShowCustomersList(true)}
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            borderRadius: '8px',
-          }}
-        >
-          👥 View All Customers ({customers.length})
-        </Button>
-      </div>
-      
-      {error && <Alert variant="danger">{error}</Alert>}
+      <Row className="justify-content-center">
+        <Col xs={12} lg={8} xl={6}>
+          {/* Header with customer list toggle */}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h2 style={{ color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+              Manage Customers
+            </h2>
+            <Button
+              variant="outline-light"
+              onClick={() => setShowCustomersList(true)}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+              }}
+            >
+              👥 View All Customers ({customers.length})
+            </Button>
+          </div>
+          
+          {error && <Alert variant="danger">{error}</Alert>}
 
-      <Row>
-        <Col lg={12}>
           {selectedCustomer ? (
             // Edit Customer Form
             <Card style={{ 
@@ -320,33 +350,75 @@ function ManageCustomers() {
                     </Col>
                   </Row>
 
-                  {/* Signature File Upload Section */}
+                  {/* Signature Update Section */}
                   <Row>
                     <Col md={12}>
                       <Form.Group className="mb-4">
                         <Form.Label className="fw-bold">
                           Update Signature (Optional)
                         </Form.Label>
-                        <Form.Text className="d-block mb-2 text-muted">
-                          Upload a new signature image to replace the current one. Leave empty to keep existing signature.
+                        <Form.Text className="d-block mb-3 text-muted">
+                          Choose how you want to provide a new signature to replace the current one. Leave empty to keep existing signature.
                         </Form.Text>
-                        <Form.Control
-                          type="file"
-                          accept="image/png,image/jpeg,image/jpg"
-                          onChange={handleSignatureFileChange}
-                          className="mb-2"
-                          ref={fileInputRef}
-                        />
-                        {signatureFile && (
-                          <div className="mt-2">
-                            <small className="text-success">
-                              ✅ Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
-                            </small>
+
+                        {/* Signature Input Method Selection */}
+                        <ButtonGroup className="mb-3 w-100">
+                          <Button
+                            variant={signatureInputMethod === 'upload' ? 'primary' : 'outline-primary'}
+                            onClick={() => handleSignatureMethodChange('upload')}
+                            style={{ flex: 1 }}
+                          >
+                            📁 Upload Image
+                          </Button>
+                          <Button
+                            variant={signatureInputMethod === 'draw' ? 'primary' : 'outline-primary'}
+                            onClick={() => handleSignatureMethodChange('draw')}
+                            style={{ flex: 1 }}
+                          >
+                            ✏️ Draw Signature
+                          </Button>
+                        </ButtonGroup>
+
+                        {/* Upload Method */}
+                        {signatureInputMethod === 'upload' && (
+                          <div>
+                            <Form.Control
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg"
+                              onChange={handleSignatureFileChange}
+                              className="mb-2"
+                              ref={fileInputRef}
+                            />
+                            {signatureFile && (
+                              <div className="mt-2">
+                                <small className="text-success">
+                                  ✅ Selected: {signatureFile.name} ({(signatureFile.size / 1024).toFixed(1)} KB)
+                                </small>
+                              </div>
+                            )}
+                            <Form.Text className="text-muted">
+                              Supported formats: PNG, JPEG, JPG (Max 5MB)
+                            </Form.Text>
                           </div>
                         )}
-                        <Form.Text className="text-muted">
-                          Supported formats: PNG, JPEG, JPG (Max 5MB)
-                        </Form.Text>
+
+                        {/* Draw Method */}
+                        {signatureInputMethod === 'draw' && (
+                          <div>
+                            <SignatureCanvas
+                              width={500}
+                              height={500}
+                              onSignatureChange={handleSignatureDrawn}
+                            />
+                            {drawnSignature && (
+                              <div className="mt-2 text-center">
+                                <small className="text-success">
+                                  ✅ Signature drawn and ready ({(drawnSignature.size / 1024).toFixed(1)} KB PNG)
+                                </small>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
@@ -399,91 +471,91 @@ function ManageCustomers() {
               </div>
             </Card>
           )}
+
+          {/* Customers List Offcanvas */}
+          <Offcanvas 
+            show={showCustomersList} 
+            onHide={() => setShowCustomersList(false)}
+            placement="start"
+            style={{
+              backgroundColor: 'rgba(30, 60, 114, 0.95)',
+              backdropFilter: 'blur(10px)',
+              width: '400px'
+            }}
+          >
+            <Offcanvas.Header closeButton style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.2)' }}>
+              <Offcanvas.Title style={{ color: 'white', fontWeight: 'bold' }}>
+                👥 All Customers ({customers.length})
+              </Offcanvas.Title>
+            </Offcanvas.Header>
+            <Offcanvas.Body style={{ padding: '0' }}>
+              {customers.length === 0 ? (
+                <div className="text-center p-4" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                  <p>No customers found</p>
+                  <Button
+                    as={Link}
+                    to="/register-customer"
+                    variant="outline-light"
+                    onClick={() => setShowCustomersList(false)}
+                  >
+                    ➕ Register First Customer
+                  </Button>
+                </div>
+              ) : (
+                <ListGroup variant="flush">
+                  {customers.map((customer) => (
+                    <ListGroup.Item
+                      key={customer.customer_id}
+                      action
+                      onClick={() => handleCustomerSelect(customer)}
+                      style={{
+                        backgroundColor: selectedCustomer?.customer_id === customer.customer_id 
+                          ? 'rgba(97, 218, 251, 0.2)' 
+                          : 'rgba(255, 255, 255, 0.05)',
+                        border: 'none',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedCustomer?.customer_id !== customer.customer_id) {
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedCustomer?.customer_id !== customer.customer_id) {
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                        }
+                      }}
+                    >
+                      <div className="d-flex justify-content-between align-items-center py-2">
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                            {customer.customer_name}
+                          </div>
+                          <div style={{ fontSize: '0.9rem', opacity: '0.8' }}>
+                            {customer.customer_email}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', opacity: '0.6' }}>
+                            Phone: {customer.customer_phone || customer.phone || 'N/A'}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', opacity: '0.6' }}>
+                            ID: {customer.national_id || 'N/A'}
+                          </div>
+                        </div>
+                        {selectedCustomer?.customer_id === customer.customer_id && (
+                          <Badge bg="info">Selected</Badge>
+                        )}
+                      </div>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
+            </Offcanvas.Body>
+          </Offcanvas>
         </Col>
       </Row>
-
-      {/* Customers List Offcanvas */}
-      <Offcanvas 
-        show={showCustomersList} 
-        onHide={() => setShowCustomersList(false)}
-        placement="start"
-        style={{
-          backgroundColor: 'rgba(30, 60, 114, 0.95)',
-          backdropFilter: 'blur(10px)',
-          width: '400px'
-        }}
-      >
-        <Offcanvas.Header closeButton style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.2)' }}>
-          <Offcanvas.Title style={{ color: 'white', fontWeight: 'bold' }}>
-            👥 All Customers ({customers.length})
-          </Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body style={{ padding: '0' }}>
-          {customers.length === 0 ? (
-            <div className="text-center p-4" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-              <p>No customers found</p>
-              <Button
-                as={Link}
-                to="/register-customer"
-                variant="outline-light"
-                onClick={() => setShowCustomersList(false)}
-              >
-                ➕ Register First Customer
-              </Button>
-            </div>
-          ) : (
-            <ListGroup variant="flush">
-              {customers.map((customer) => (
-                <ListGroup.Item
-                  key={customer.customer_id}
-                  action
-                  onClick={() => handleCustomerSelect(customer)}
-                  style={{
-                    backgroundColor: selectedCustomer?.customer_id === customer.customer_id 
-                      ? 'rgba(97, 218, 251, 0.2)' 
-                      : 'rgba(255, 255, 255, 0.05)',
-                    border: 'none',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedCustomer?.customer_id !== customer.customer_id) {
-                      e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedCustomer?.customer_id !== customer.customer_id) {
-                      e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                    }
-                  }}
-                >
-                  <div className="d-flex justify-content-between align-items-center py-2">
-                    <div>
-                      <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                        {customer.customer_name}
-                      </div>
-                      <div style={{ fontSize: '0.9rem', opacity: '0.8' }}>
-                        {customer.customer_email}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', opacity: '0.6' }}>
-                        Phone: {customer.customer_phone || customer.phone || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', opacity: '0.6' }}>
-                        ID: {customer.national_id || 'N/A'}
-                      </div>
-                    </div>
-                    {selectedCustomer?.customer_id === customer.customer_id && (
-                      <Badge bg="info">Selected</Badge>
-                    )}
-                  </div>
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          )}
-        </Offcanvas.Body>
-      </Offcanvas>
     </Container>
   );
 }
