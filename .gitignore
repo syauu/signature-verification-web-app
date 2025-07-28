@@ -25,6 +25,8 @@ backend/.env
 .idea/
 .DS_Store
 Thumbs.db
+CEDAR/
+ICDAR2011/
 
 # Git LFS attributes (optional)
 .gitattributes
