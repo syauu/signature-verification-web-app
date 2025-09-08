@@ -248,10 +248,6 @@ npm run build                   # Production build test
 4. Push to branch: `git push origin feature-name`
 5. Create a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 👥 Authors
 
 - **Syauqi** - *Initial work* - [@syauu](https://github.com/syauu)
@@ -263,23 +259,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - TensorFlow/Keras for machine learning framework
 - React and Flask communities for excellent documentation
 
-## 📞 Support
-
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the documentation in the `trained models and report/` directory
-- Review the Jupyter notebook for model training details
-
-## 🔮 Future Enhancements
-
-- [ ] Multi-tenant support for multiple organizations
-- [ ] REST API documentation with OpenAPI/Swagger
-- [ ] Mobile application for signature capture
-- [ ] Advanced analytics and reporting dashboard
-- [ ] Integration with external authentication providers
-- [ ] Signature comparison visualizations
-- [ ] Batch verification capabilities
-
 ---
-
-**Built with ❤️ for secure signature verification**
